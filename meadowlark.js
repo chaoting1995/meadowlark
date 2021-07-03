@@ -2,17 +2,31 @@
 const express = require('express');
 // 載入 模板引擎
 const expressHandlebars = require('express-handlebars');
+//
+const handlers = require('./lib/handlers');
+const weatherMiddlware = require('./lib/middleware/weather');
 // 建立 express實例
 const app = express();
+// 載入自製模組時，要加./，否則Node會進入node_modules尋找模組
+const fortune = require('./lib/fortune');
+
 // 建立handlebars實例(一個模板引擎)，使express預設使用
 app.engine(
-  'handlebars',
+  'hbs',
   //指定預預設layout，即除非另外指定，否則所有view都使用這個layout
   expressHandlebars({
     defaultLayout: 'main',
+    extname: '.hbs',
+    helpers: {
+      section: function (name, options) {
+        if (!this._sections) this._sections = {};
+        this._sections[name] = options.fn(this);
+        return null;
+      },
+    },
   })
 );
-app.set('view engine', 'handlebars');
+app.set('view engine', 'hbs');
 
 // 在宣告任何路由之前，加入static中介函式
 // static為想傳遞的靜態檔案建立一個路由，傳給用戶端
@@ -24,14 +38,6 @@ const port = process.env.PORT || 3000;
 app.get('/', (req, res) => res.render('home'));
 
 app.get('/about', (req, res) => {
-  const fortunes = [
-    'AAAAAAAAAAAAAAAAAA',
-    'BBBBBBBBBBBBBBBBBB',
-    'CCCCCCCCCCCCCCCCCC',
-    'DDDDDDDDDDDDDDDDDD',
-    'EEEEEEEEEEEEEEEEEE',
-  ];
-  const randomFortune = fortunes[Math.floor(Math.random() * fortunes.length)];
   res.render('about', { fortune: randomFortune });
 });
 
@@ -81,3 +87,13 @@ app.listen(port, () =>
 // 通常指定public
 // 代表此目錄內的任何東西都會無條件地傳給用戶端
 // 可以放圖檔,css檔,用戶端js檔(???)
+
+// render一個模板時，要將content物件傳給模板引擎
+// handlebars組合 content物件 + 模板 來render出HTML
+// 例如：
+// content物件 => { name: 'This is string' }
+// 模板內容 => <p> {{ name }} </p>
+
+// 例如：用{{{}}}包html內容才能正確解析
+// content物件 => { name: '<b>This is string</b>' }
+// 模板內容 => <p> {{{ name }}} </p>
